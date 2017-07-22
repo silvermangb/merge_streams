@@ -23,6 +23,32 @@ operator<<(std::ostream& os, std::pair<int, int> const & p) {
 }
 
 /**
+ * get the next value T in an istream.
+ *
+ * returns:
+ * 	true if a value of type T was found.
+ * 	false if no value was found
+ */
+template<typename T>
+bool next_from_stream
+	(std::istream & p_is,
+	 T& p_t)
+{
+	if(!p_is.eof())
+	{
+		p_is >> p_t;
+		if(!p_is.fail())
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	return false;
+}
+/**
  * use a priority queue to select the next stream to read from and write to the output,
  * p_os. the priority queue contains pairs of integers, (v,i), where v is the last value read from
  * stream i in the vector of streams.
@@ -36,12 +62,10 @@ void merge_streams(
 	// initialize
 	int v;
 	for (size_t i = 0; i < p_streams.size(); ++i) {
-		if (!p_streams[i].get().eof()) {
-			p_streams[i].get() >> v;
-			if (!p_streams[i].get().fail()) {
-				std::pair<int, int> e(v, i);
-				merged.push(e);
-			}
+		if(next_from_stream<>(p_streams[i].get(),v))
+		{
+			std::pair<int, int> e(v, i);
+			merged.push(e);
 		}
 	}
 
@@ -49,41 +73,35 @@ void merge_streams(
 	 * get the pair, (v,i), whose first member, v, is the smallest currently in
 	 * the priority queue. the second member, i, is the index of the corresponding
 	 * stream.
-	 *
-	 * if there is another int in stream i, push the pair into the priority queue.
 	 */
-	bool consumed;
+	bool unconsumed_value;
 	while (!merged.empty()) {
+
 		std::pair<int, int> top = merged.top();
 		merged.pop();
 		p_os << top.first << " " << top.second << '\n';
 
-		std::istream & is = p_streams[top.second].get();
+		std::istream & current_stream = p_streams[top.second].get();
 
-		if (!is.eof()) {
-			consumed = false;
-			is >> v;
-			if (!is.fail()) {
-				while (v <= merged.top().first) {
-					consumed = true;
-					p_os << v << " " << top.second << "\n";
-
-					if (!is.eof()) {
-						consumed = false;
-						is >> v;
-						if (is.fail()) {
-							consumed = true;
-							break;
-						}
-					} else {
-						break;
-					}
-				}
-				if (!consumed) {
-					merged.push(std::pair<int, int>(v, top.second));
+		/**
+		 * continue to read from current stream while its next value
+		 * is less than or equal to the smallest value in the priority queue.
+		 */
+		if((unconsumed_value=next_from_stream<>(current_stream,v)))
+		{
+			while(v<=merged.top().first)
+			{
+				unconsumed_value = false;
+				p_os << v << " " << top.second << "\n";
+				if(!(unconsumed_value=next_from_stream<>(current_stream,v)))
+				{
+					break;
 				}
 			}
-
+		}
+		if(unconsumed_value)
+		{
+			merged.push(std::pair<int, int>(v, top.second));
 		}
 
 	}
