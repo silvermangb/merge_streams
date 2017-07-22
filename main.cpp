@@ -15,13 +15,6 @@
 #include <iostream>
 #include <fstream>
 
-class Cmp {
-public:
-	bool operator()(std::pair<int, int> const & lhs,
-			std::pair<int, int> const & rhs) {
-		return rhs.first < lhs.first;
-	}
-};
 
 std::ostream&
 operator<<(std::ostream& os, std::pair<int, int> const & p) {
@@ -38,8 +31,7 @@ void merge_streams(
 		std::vector<std::reference_wrapper<std::istream>> & p_streams,
 		std::ostream& p_os) {
 
-	std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,
-	Cmp> merged;
+	std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,std::greater<std::pair<int,int>>> merged;
 
 	// initialize
 	int v;
