@@ -15,22 +15,16 @@
 #include <iostream>
 #include <fstream>
 
-
-
-class Cmp
-{
+class Cmp {
 public:
-	bool operator()(std::pair<int,int> const & lhs, std::pair<int,int> const & rhs)
-	{
-	      return rhs.first<lhs.first;
+	bool operator()(std::pair<int, int> const & lhs,
+			std::pair<int, int> const & rhs) {
+		return rhs.first < lhs.first;
 	}
 };
 
 std::ostream&
-operator<<
-	(std::ostream& os,
-	 std::pair<int,int> const & p)
-{
+operator<<(std::ostream& os, std::pair<int, int> const & p) {
 	os << '(' << p.first << ',' << p.second << ')';
 	return os;
 }
@@ -40,61 +34,67 @@ operator<<
  * p_os. the priority queue contains pairs of integers, (v,i), where v is the last value read from
  * stream i in the vector of streams.
  */
-void
-merge_streams
-  (std::vector<std::reference_wrapper<std::istream>>  & p_streams,
-   std::ostream& p_os)
-{
+void merge_streams(
+		std::vector<std::reference_wrapper<std::istream>> & p_streams,
+		std::ostream& p_os) {
 
-    std::priority_queue<std::pair<int,int>, std::vector<std::pair<int,int>>, Cmp > merged;
+	std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>,
+	Cmp> merged;
 
-    // initialize
-    int v;
-    for(size_t i=0;i<p_streams.size();++i)
-    {
-    	p_streams[i].get() >> v;
-    	if(!p_streams[i].get().eof())
-    	{
-    		std::pair<int,int> e(v,i);
-    		merged.push(e);
-    	}
-    }
+	// initialize
+	int v;
+	for (size_t i = 0; i < p_streams.size(); ++i) {
+		if (!p_streams[i].get().eof()) {
+			p_streams[i].get() >> v;
+			if (!p_streams[i].get().fail()) {
+				std::pair<int, int> e(v, i);
+				merged.push(e);
+			}
+		}
+	}
 
-    /*
-     * get the pair, (v,i), whose first member, v, is the smallest currently in
-     * the priority queue. the second member, i, is the index of the corresponding
-     * stream.
-     *
-     * if there is another int in stream i, push the pair into the priority queue.
-     */
-    while(!merged.empty())
-    {
-    	std::pair<int,int> top = merged.top();
-    	merged.pop();
-    	p_os << top.first << '\n';
-    	p_streams[top.second].get() >> v;
-    	if(!p_streams[top.second].get().eof())
-    	{
-		bool v_needs_to_be_pushed = true;
-    		while(v<=merged.top().first)
-    		{
-    			p_os << v << "\n";
-			v_needs_to_be_pushed = false;
+	/*
+	 * get the pair, (v,i), whose first member, v, is the smallest currently in
+	 * the priority queue. the second member, i, is the index of the corresponding
+	 * stream.
+	 *
+	 * if there is another int in stream i, push the pair into the priority queue.
+	 */
+	bool consumed;
+	while (!merged.empty()) {
+		std::pair<int, int> top = merged.top();
+		merged.pop();
+		p_os << top.first << " " << top.second << '\n';
 
-    			p_streams[top.second].get() >> v;
-    			if(p_streams[top.second].get().eof())
-    			{
-				v_needs_to_be_pushed = true;
-    				break;
-    			}
-    		}
-    		if(v_needs_to_be_pushed)
-    		{
-    			merged.push(std::pair<int,int>(v,top.second));
-    		}
-    	}
+		std::istream & is = p_streams[top.second].get();
 
-    }
+		if (!is.eof()) {
+			consumed = false;
+			is >> v;
+			if (!is.fail()) {
+				while (v <= merged.top().first) {
+					consumed = true;
+					p_os << v << " " << top.second << "\n";
+
+					if (!is.eof()) {
+						consumed = false;
+						is >> v;
+						if (is.fail()) {
+							consumed = true;
+							break;
+						}
+					} else {
+						break;
+					}
+				}
+				if (!consumed) {
+					merged.push(std::pair<int, int>(v, top.second));
+				}
+			}
+
+		}
+
+	}
 
 }
 
@@ -103,20 +103,18 @@ merge_streams
  */
 int main() {
 
+	std::vector<std::reference_wrapper<std::istream>> vss;
 
-    std::vector<std::reference_wrapper<std::istream>> vss;
+	std::ifstream a("a.txt");
+	std::ifstream b("b.txt");
+	std::ifstream c("c.txt");
 
-    std::ifstream a("a.txt");
-    std::ifstream b("b.txt");
-    std::ifstream c("c.txt");
+	vss.push_back(a);
+	vss.push_back(b);
+	vss.push_back(c);
 
+	merge_streams(vss, std::cout);
 
-    vss.push_back(a);
-    vss.push_back(b);
-    vss.push_back(c);
-
-    merge_streams(vss,std::cout);
-
-    return 0;
+	return 0;
 }
 
